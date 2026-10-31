@@ -6,11 +6,28 @@ Não há pagamentos, estoque nem servidor próprio. HTML/CSS/JS + Firebase Authe
 ## Como usar a interface
 
 - No iPad/computador, use os botões **+ / −** ao lado das bebidas. O resumo fica ao lado do cardápio.
-- Para o latte, toque em **+**: primeiro aparece a temperatura; depois da escolha, o xarope; por último, **Adicionar ao pedido**. A recomendação da noiva abre direto no xarope, pois é sempre gelada. Cada combinação fica separada no pedido; ajuste suas quantidades no resumo.
+- Para o latte, toque em **+**: primeiro aparece a temperatura; depois da escolha, o xarope; por último, **Adicionar ao pedido**. A recomendação da noiva é um iced latte com Cumaru: toque em **+** para adicionar direto. Cada combinação fica separada no pedido; ajuste suas quantidades no resumo.
 - No celular, adicione as bebidas e toque em **Ver meu pedido** para revisar e informar seu nome. Feche a revisão para voltar ao cardápio.
 - Observações são opcionais: toque em **Observações** quando precisar.
 - Depois de enviar, aguarde a confirmação e retire no balcão. **Fazer outro pedido** limpa a tela para o próximo cliente.
 - No painel do barista, avance cada pedido por **Começar preparo → Marcar pronto → Confirmar entrega**. Em cada etapa, os pedidos mais antigos aparecem primeiro.
+- Abra **Acompanhar** para ver a tela dos convidados: **Na fila**, **Preparando** e **Prontos para retirar**. Ela não exige e-mail/senha e mostra apenas nomes e status. Os pedidos entregues saem automaticamente da tela.
+
+## Ativar o acompanhamento e o segundo barista
+
+1. No Firebase, abra **Firestore Database > Rules**, substitua todo o editor pelo conteúdo atualizado de `firestore.rules` e clique em **Publish**. Os dois UIDs informados já estão na lista de `isBarista()`.
+2. Publique as regras **antes de usar esta versão do site**: cada pedido grava também um resumo em `orderStatus` e um evento de histórico em `orders/{orderId}/events`.
+3. Faça o deploy atualizado do site e recarregue as telas de pedidos e do barista.
+4. Abra `/acompanhamento.html` no celular, tablet ou TV. Não é necessário criar a coleção manualmente.
+5. Entre no painel do barista uma vez para sincronizar pedidos antigos. Depois, novos pedidos e mudanças de status são gravados atomicamente nas duas coleções.
+
+Para adicionar outro barista no futuro, crie o usuário em **Authentication > Users**, inclua o novo UID na lista de `isBarista()` e publique as regras novamente. Cadastrar apenas o e-mail não concede acesso aos pedidos.
+
+## Métricas futuras
+
+Os pedidos registram bebida/receita, temperatura, xarope, quantidade, destaque da noiva, evento, fuso horário, marcação de teste e o horário de cada etapa. As mudanças ficam em um histórico com o UID do barista, revisão sequencial e ciclos de reabertura.
+
+Configure o evento e `isTest` em `eventSettings` no `menu.js`. O dicionário dos campos, as fórmulas e os cuidados com registros antigos estão em [METRICS.md](METRICS.md).
 
 ## 1. Ajuste o cardápio
 
@@ -23,7 +40,7 @@ Edite `menu.js`: nome da cafeteria, categorias, bebidas, descrições e preços 
 3. Em **Build > Authentication > Sign-in method**, habilite **Anonymous** (clientes) e **Email/Password** (barista).
 4. Em **Authentication > Users**, crie manualmente um usuário com seu e-mail e uma senha forte. Copie o **UID** deste usuário.
 5. Em **Build > Firestore Database**, crie um banco de dados. Escolha uma região próxima e configure em modo de produção.
-6. Abra **Firestore Database > Rules**, cole o conteúdo de `firestore.rules`, substitua `COLE_AQUI_O_UID_DO_BARISTA` pelo UID copiado e clique em **Publish**.
+6. Abra **Firestore Database > Rules**, cole o conteúdo de `firestore.rules`, confira a lista de UIDs em `isBarista()` e clique em **Publish**.
 
 **ATENÇÃO:** Não publique as regras sem trocar o UID. Não configure `allow read, write: if true`.
 As chaves em `firebase-config.js` identificam o projeto, mas não são credenciais secretas; as regras protegem os dados.
@@ -38,9 +55,10 @@ python -m http.server 8080
 
 - Cliente: http://localhost:8080/
 - Barista: http://localhost:8080/barista.html
+- Acompanhamento: http://localhost:8080/acompanhamento.html
 
 Abra a tela barista em outra janela, entre com o e-mail e a senha, faça um pedido na tela cliente e confirme que aparece na fila.
-Teste também mudar para **Preparando → Pronto → Entregue**.
+Teste também mudar para **Preparando → Pronto → Entregue**, conferindo que o acompanhamento muda de coluna e remove os pedidos entregues.
 
 ## 4. Publique na Vercel
 
@@ -83,10 +101,10 @@ A configuração Web do Firebase continuará visível no navegador, pois o aplic
 
 ## Segurança e limites
 
-- Só o usuário com UID configurado nas regras pode ler e atualizar os pedidos.
-- Visitantes podem criar pedidos com autenticação anônima; não podem ler a fila.
+- Só os usuários com UID na lista de baristas podem ler e atualizar os pedidos completos.
+- Visitantes podem criar pedidos com autenticação anônima e ler os nomes/status ativos em `orderStatus`. Eles não podem ler itens ou observações em `orders`, nem mudar os status.
 - Para um evento privado e pequeno, é intencionalmente simples. Quem tiver o link pode enviar pedidos, então não compartilhe a URL indiscriminadamente. A proteção anti-spam é básica e não é adequada a uma operação pública de alto volume.
-- O painel carrega os últimos **200 pedidos** por data de criação. Para eventos maiores, amplie esse limite ou use paginação.
+- O painel carrega os últimos **200 pedidos** por data de criação. O acompanhamento carrega até **200 pedidos ativos**. Para eventos maiores, amplie esse limite ou use paginação.
 - Os valores exibidos no cliente são informativos; **não há cobrança/pagamento integrado**.
 
 ### Referências oficiais

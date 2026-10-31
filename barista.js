@@ -1,8 +1,10 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js';
-import { getFirestore, collection, query, orderBy, limit, onSnapshot, doc, updateDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js';
+import { getFirestore, collection, query, orderBy, limit, onSnapshot, getDocs, doc, writeBatch, runTransaction, serverTimestamp } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js';
 import { firebaseConfig, firebaseConfigured } from './firebase-config.js';
 import { cafeName } from './menu.js';
+import { activeOrderStatuses, publicOrderData, samePublicOrder } from './order-status.js';
+import { statusTransition } from './order-metrics.js';
 
 const $ = (id) => document.getElementById(id);
 $('brand').textContent = cafeName;
@@ -15,6 +17,8 @@ let showCompleted = false;
 let lastOrders = [];
 let soundEnabled = false;
 let audioContext;
+let syncVersion = 0;
+let publicSyncStarted = false;
 const STATUS_LABELS = { pending: 'Na fila', preparing: 'Preparando', ready: 'Pronto para retirar', delivered: 'Entregue' };
 
 function setNotice(message, kind = '') {
@@ -93,10 +97,23 @@ function makeOrderCard(order) {
       const previousLabel = button.textContent;
       button.textContent = 'Atualizando…';
       try {
-        await updateDoc(doc(db, 'orders', order.id), { status: next, updatedAt: serverTimestamp() });
+        const orderRef = doc(db, 'orders', order.id);
+        const eventRef = doc(collection(db, 'orders', order.id, 'events'));
+        await runTransaction(db, async (transaction) => {
+          const snapshot = await transaction.get(orderRef);
+          if (!snapshot.exists()) throw new Error('Order not found');
+          const current = snapshot.data();
+          const { patch, event } = statusTransition(
+            current, data.status, next, auth.currentUser?.uid, serverTimestamp(), eventRef.id);
+          transaction.update(orderRef, patch);
+          transaction.set(eventRef, event);
+          transaction.set(doc(db, 'orderStatus', order.id), publicOrderData({ ...current, ...patch }));
+        });
       } catch (error) {
         console.error(error);
-        $('queue-error').textContent = 'Não foi possível atualizar. Verifique a conexão e tente novamente.';
+        $('queue-error').textContent = error.code === 'order/status-conflict'
+          ? 'Este pedido já foi atualizado por outro barista. Confira o status atual.'
+          : 'Não foi possível atualizar. Verifique a conexão e tente novamente.';
         $('queue-error').hidden = false;
         button.textContent = previousLabel;
         for (const sibling of actions.querySelectorAll('button')) sibling.disabled = false;
@@ -131,16 +148,49 @@ function renderQueue(orders) {
   }
 }
 
+async function syncExistingOrderStatuses(orders, version) {
+  try {
+    const published = await getDocs(query(collection(db, 'orderStatus'), orderBy('createdAt', 'desc'), limit(200)));
+    if (version !== syncVersion) return;
+    const publicOrders = new Map(published.docs.map((order) => [order.id, order.data()]));
+    const changes = orders.filter((order) =>
+      order.data.createdAt && typeof order.data.customer === 'string' &&
+      (activeOrderStatuses.includes(order.data.status) || publicOrders.has(order.id)) &&
+      !samePublicOrder(order.data, publicOrders.get(order.id)));
+    // Rules read the corresponding private order. Small batches stay within lookup limits.
+    for (let i = 0; i < changes.length; i += 10) {
+      if (version !== syncVersion) return;
+      const batch = writeBatch(db);
+      for (const order of changes.slice(i, i + 10)) {
+        batch.set(doc(db, 'orderStatus', order.id), publicOrderData(order.data));
+      }
+      await batch.commit();
+    }
+  } catch (error) {
+    if (version !== syncVersion) return;
+    console.error(error);
+    publicSyncStarted = false;
+    $('queue-error').textContent = 'Não foi possível sincronizar o acompanhamento. Recarregue para tentar novamente.';
+    $('queue-error').hidden = false;
+  }
+}
+
 function listenToOrders() {
   unsubscribe?.();
+  const version = ++syncVersion;
+  publicSyncStarted = false;
   hasInitialSnapshot = false;
   setNotice('Buscando pedidos…');
   const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'), limit(200));
-  unsubscribe = onSnapshot(q, (snapshot) => {
+  unsubscribe = onSnapshot(q, { includeMetadataChanges: true }, (snapshot) => {
     if (hasInitialSnapshot && snapshot.docChanges().some((change) => change.type === 'added' && change.doc.data().status === 'pending')) beep();
     hasInitialSnapshot = true;
     lastOrders = snapshot.docs.map((document) => ({ id: document.id, data: document.data() }));
     renderQueue(lastOrders);
+    if (!publicSyncStarted && !snapshot.metadata?.fromCache) {
+      publicSyncStarted = true;
+      syncExistingOrderStatuses(lastOrders, version);
+    }
     setNotice('Atualizando em tempo real', 'good');
   }, (error) => {
     console.error(error);
@@ -161,7 +211,7 @@ async function init() {
     const isEmailUser = Boolean(user && !user.isAnonymous);
     setView(isEmailUser);
     if (isEmailUser) listenToOrders();
-    else { unsubscribe?.(); unsubscribe = undefined; }
+    else { unsubscribe?.(); unsubscribe = undefined; ++syncVersion; }
   });
 }
 

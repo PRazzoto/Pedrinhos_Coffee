@@ -26,7 +26,7 @@ if (missing.length) {
   }
 
   await mkdir(output, { recursive: true });
-  for (const file of ['index.html', 'barista.html', 'styles.css', 'menu.js', 'order.js', 'barista.js']) {
+  for (const file of ['index.html', 'barista.html', 'acompanhamento.html', 'styles.css', 'menu.js', 'order.js', 'barista.js', 'acompanhamento.js', 'order-status.js', 'order-metrics.js']) {
     await copyFile(new URL(file, root), new URL(file, output));
   }
   await writeFile(new URL('firebase-config.js', output),

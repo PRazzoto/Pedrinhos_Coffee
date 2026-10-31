@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#f5f3eb" />
+  <title>Acompanhar pedidos</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body class="tracking-page">
+  <div class="layout tracking-layout">
+    <header class="topbar">
+      <div class="brand-lockup">
+        <svg class="brand-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M10 20h24v10a10 10 0 0 1-10 10h-4a10 10 0 0 1-10-10V20Z"/><path d="M34 23h3a5 5 0 0 1 0 10h-3M6 43h34M17 14c-4-5 4-5 0-10m9 10c-4-5 4-5 0-10" stroke-linecap="round"/></svg>
+        <div class="brand" id="brand">OS PEDRINHOS</div>
+      </div>
+      <a class="tracking-link" href="./index.html">Fazer pedido</a>
+    </header>
+    <main>
+      <div class="tracking-heading">
+        <h1>Acompanhe seu <em>café.</em></h1>
+        <div class="tracking-connection">
+          <p id="tracking-notice" class="notice" role="status">Conectando…</p>
+          <button id="tracking-retry" class="text-button" type="button" hidden>Tentar novamente</button>
+        </div>
+      </div>
+      <div id="tracking-board" class="tracking-board" hidden>
+        <section class="tracking-column tracking-ready" aria-labelledby="ready-title">
+          <div class="tracking-column-heading"><h2 id="ready-title">Prontos para retirar</h2><span id="tracking-count-ready" class="tracking-count">0</span></div>
+          <ul id="tracking-ready" class="tracking-list"></ul>
+          <p id="tracking-empty-ready" class="tracking-empty">Nenhum pedido</p>
+        </section>
+        <section class="tracking-column tracking-preparing" aria-labelledby="preparing-title">
+          <div class="tracking-column-heading"><h2 id="preparing-title">Preparando</h2><span id="tracking-count-preparing" class="tracking-count">0</span></div>
+          <ul id="tracking-preparing" class="tracking-list"></ul>
+          <p id="tracking-empty-preparing" class="tracking-empty">Nenhum pedido</p>
+        </section>
+        <section class="tracking-column tracking-pending" aria-labelledby="pending-title">
+          <div class="tracking-column-heading"><h2 id="pending-title">Na fila</h2><span id="tracking-count-pending" class="tracking-count">0</span></div>
+          <ul id="tracking-pending" class="tracking-list"></ul>
+          <p id="tracking-empty-pending" class="tracking-empty">Nenhum pedido</p>
+        </section>
+      </div>
+      <p id="tracking-announcement" class="sr-only" role="status" aria-live="polite"></p>
+    </main>
+  </div>
+  <noscript><p class="noscript-message">Ative o JavaScript para acompanhar os pedidos.</p></noscript>
+  <script type="module" src="./acompanhamento.js"></script>
+</body>
+</html>

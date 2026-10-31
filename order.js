@@ -1,8 +1,10 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js';
 import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js';
-import { getFirestore, collection, addDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js';
+import { getFirestore, collection, doc, writeBatch, serverTimestamp } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js';
 import { firebaseConfig, firebaseConfigured } from './firebase-config.js';
-import { cafeName, menu, allItems } from './menu.js';
+import { cafeName, menu, allItems, eventSettings } from './menu.js';
+import { publicOrderData } from './order-status.js';
+import { orderItemData, createOrderData } from './order-metrics.js';
 
 const $ = (id) => document.getElementById(id);
 $('brand').textContent = cafeName;
@@ -66,7 +68,8 @@ function selectedVariant(item) {
   return {
     id: [item.id, ...values.map((value) => encodeURIComponent(value.toLowerCase()))].join('--'),
     baseId: item.id,
-    name: [item.name, ...values].join(' · '),
+    name: [item.orderName ?? item.name, ...values].join(' · '),
+    options: { ...item.attributes, ...choice },
     price: item.price,
   };
 }
@@ -433,24 +436,24 @@ $('order-form').addEventListener('submit', async (event) => {
   const customer = $('customer-name').value.trim();
   const notes = $('customer-notes').value.trim();
   if (!customer) { $('customer-name').focus(); return; }
-  const items = [...cart].map(([id, qty]) => ({
-    id,
-    name: cartItems.get(id).name,
-    qty,
-  }));
+  const items = [...cart].map(([id, qty]) => orderItemData(cartItems.get(id), qty, menu, eventSettings.currency));
   sending = true;
   $('order-error').hidden = true;
   $('submit-order').firstElementChild.textContent = 'Enviando…';
   $('order-form').setAttribute('aria-busy', 'true');
   renderCart();
   try {
-    await addDoc(collection(db, 'orders'), {
-      customer,
-      notes,
-      items,
-      status: 'pending',
-      createdAt: serverTimestamp(),
+    const orderRef = doc(collection(db, 'orders'));
+    const eventRef = doc(collection(db, 'orders', orderRef.id, 'events'));
+    const { order, event } = createOrderData({
+      customer, notes, items, settings: eventSettings,
+      at: serverTimestamp(), eventId: eventRef.id,
     });
+    const batch = writeBatch(db);
+    batch.set(orderRef, order);
+    batch.set(eventRef, event);
+    batch.set(doc(db, 'orderStatus', orderRef.id), publicOrderData(order));
+    await batch.commit();
     closeCheckout(false);
     cart.clear();
     cartItems.clear();
@@ -503,7 +506,7 @@ document.addEventListener('keydown', (event) => {
   }
   if (event.key !== 'Tab') return;
   const dialog = confirmationOpen ? $('confirmation') : $('checkout');
-  const controls = [...dialog.querySelectorAll('button, input, textarea, summary')]
+  const controls = [...dialog.querySelectorAll('a[href], button, input, textarea, summary')]
     .filter((node) => !node.disabled && node.getClientRects().length);
   const first = controls[0];
   const last = controls[controls.length - 1];

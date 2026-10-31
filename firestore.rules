@@ -1,37 +1,180 @@
-  rules_version = '2';
-  service cloud.firestore {
-    match /databases/{database}/documents {
-      function isBarista() {
-        // TROQUE PELO UID do usuário criado em Authentication > Users.
-        return request.auth != null && request.auth.uid == 'Hl70rVLXl9Oc8IffrvA8sI3RpPw1';
-      }
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isBarista() {
+      return request.auth != null && request.auth.uid in [
+        'Hl70rVLXl9Oc8IffrvA8sI3RpPw1',
+        'Sm12wDO8XkMNzp1NVF0iYpEWaNW2'
+      ];
+    }
 
-      match /orders/{orderId} {
-        // Clientes anônimos podem somente CRIAR pedidos (não ler a fila).
-        allow create: if request.auth != null
-          && request.resource.data.keys().hasAll(['customer', 'notes', 'items', 'status', 'createdAt'])
-          && request.resource.data.keys().hasOnly(['customer', 'notes', 'items', 'status', 'createdAt'])
-          && request.resource.data.customer is string
-          && request.resource.data.customer.size() > 0
-          && request.resource.data.customer.size() <= 40
-          && request.resource.data.notes is string
-          && request.resource.data.notes.size() <= 200
-          && request.resource.data.items is list
-          && request.resource.data.items.size() > 0
-          && request.resource.data.items.size() <= 12
-          && request.resource.data.status == 'pending'
-          && request.resource.data.createdAt == request.time;
+    function quantityAt(items, index) {
+      return items.size() > index ? items[index].qty : 0;
+    }
 
-        // Só o barista pode consultar os pedidos.
+    function totalQuantity(items) {
+      return quantityAt(items, 0) + quantityAt(items, 1) + quantityAt(items, 2)
+        + quantityAt(items, 3) + quantityAt(items, 4) + quantityAt(items, 5)
+        + quantityAt(items, 6) + quantityAt(items, 7) + quantityAt(items, 8)
+        + quantityAt(items, 9) + quantityAt(items, 10) + quantityAt(items, 11);
+    }
+
+    function validItemAt(items, index) {
+      let item = items.size() > index ? items[index] : null;
+      return items.size() <= index || (
+        item.id is string && item.baseId is string && item.productId is string
+        && item.productName is string && item.name is string && item.category is string
+        && item.qty is int && item.qty > 0 && item.qty <= 20
+        && item.options is map && item.optionLabels is map && item.featured is bool
+        && (item.unitPriceCents == null || (item.unitPriceCents is int && item.unitPriceCents >= 0))
+        && item.currency == request.resource.data.currency
+      );
+    }
+
+    function validItems(items) {
+      return items is list && items.size() > 0 && items.size() <= 12
+        && validItemAt(items, 0) && validItemAt(items, 1) && validItemAt(items, 2)
+        && validItemAt(items, 3) && validItemAt(items, 4) && validItemAt(items, 5)
+        && validItemAt(items, 6) && validItemAt(items, 7) && validItemAt(items, 8)
+        && validItemAt(items, 9) && validItemAt(items, 10) && validItemAt(items, 11);
+    }
+
+    function validNewMetrics() {
+      let data = request.resource.data;
+      return data.schemaVersion == 2
+        && data.eventId is string && data.eventId.size() > 0 && data.eventId.size() <= 80
+        && data.timeZone is string && data.timeZone.size() > 0 && data.timeZone.size() <= 64
+        && data.currency is string && data.currency.size() == 3
+        && data.isTest is bool && data.channel == 'web'
+        && data.hasNotes == (data.notes.size() > 0)
+        && data.lineCount == data.items.size()
+        && data.itemCount is int && data.itemCount == totalQuantity(data.items)
+        && data.itemCount > 0 && data.itemCount <= 20
+        && (data.orderValueCents == null || (data.orderValueCents is int && data.orderValueCents >= 0))
+        && data.statusRevision == 0 && data.cycle == 1 && data.reopenCount == 0
+        && data.updatedAt == request.time && data.historyStartedAt == request.time
+        && data.historyComplete == true
+        && data.preparationStartedAt == null && data.readyAt == null
+        && data.deliveredAt == null && data.lastReopenedAt == null
+        && data.lastEventId is string && data.lastEventId.size() > 0;
+    }
+
+    function validTransition() {
+      return (resource.data.status == 'pending' && request.resource.data.status == 'preparing')
+        || (resource.data.status == 'preparing' && request.resource.data.status == 'ready')
+        || (resource.data.status == 'ready' && request.resource.data.status == 'delivered')
+        || (resource.data.status == 'delivered' && request.resource.data.status == 'pending');
+    }
+
+    function validLifecycleUpdate() {
+      let data = request.resource.data;
+      let previous = resource.data;
+      let reopening = data.status == 'pending';
+      return data.statusRevision == previous.get('statusRevision', 0) + 1
+        && data.lastEventId is string && data.lastEventId.size() > 0
+        && data.lastEventId != previous.get('lastEventId', '')
+        && data.cycle == previous.get('cycle', 1) + (reopening ? 1 : 0)
+        && data.reopenCount == previous.get('reopenCount', 0) + (reopening ? 1 : 0)
+        && data.historyComplete == previous.get('historyComplete', false)
+        && data.historyStartedAt == previous.get('historyStartedAt', request.time)
+        && data.preparationStartedAt == (reopening ? null
+          : data.status == 'preparing' ? request.time : previous.get('preparationStartedAt', null))
+        && data.readyAt == (reopening ? null
+          : data.status == 'ready' ? request.time : previous.get('readyAt', null))
+        && data.deliveredAt == (reopening ? null
+          : data.status == 'delivered' ? request.time : previous.get('deliveredAt', null))
+        && data.lastReopenedAt == (reopening ? request.time : previous.get('lastReopenedAt', null));
+    }
+
+    function hasMatchingHistory(orderId, creating) {
+      let data = request.resource.data;
+      let event = getAfter(/databases/$(database)/documents/orders/$(orderId)/events/$(data.lastEventId)).data;
+      return event.revision == data.statusRevision && event.toStatus == data.status
+        && event.cycle == data.cycle && event.at == request.time
+        && (creating
+          ? event.type == 'created' && event.fromStatus == null && event.actorUid == null
+          : event.type == 'status_changed' && event.fromStatus == resource.data.status
+            && event.actorUid == request.auth.uid);
+    }
+
+    function validHistoryEvent(orderId, eventId) {
+      let event = request.resource.data;
+      let order = getAfter(/databases/$(database)/documents/orders/$(orderId)).data;
+      return event.keys().hasAll(['type', 'revision', 'fromStatus', 'toStatus', 'at', 'actorUid', 'cycle'])
+        && event.keys().hasOnly(['type', 'revision', 'fromStatus', 'toStatus', 'at', 'actorUid', 'cycle'])
+        && event.at == request.time
+        && event.revision is int && event.revision >= 0
+        && event.cycle is int && event.cycle > 0
+        && order.lastEventId == eventId && order.statusRevision == event.revision
+        && order.status == event.toStatus && order.cycle == event.cycle
+        && (event.type == 'created'
+          ? !exists(/databases/$(database)/documents/orders/$(orderId))
+            && event.revision == 0 && event.fromStatus == null
+            && event.toStatus == 'pending' && event.actorUid == null
+          : event.type == 'status_changed' && isBarista()
+            && event.actorUid == request.auth.uid
+            && event.fromStatus == get(/databases/$(database)/documents/orders/$(orderId)).data.status);
+    }
+
+    function validPublicStatus() {
+      return request.resource.data.keys().hasAll(['customer', 'status', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['customer', 'status', 'createdAt'])
+        && request.resource.data.customer is string
+        && request.resource.data.customer.size() > 0
+        && request.resource.data.customer.size() <= 40
+        && request.resource.data.createdAt is timestamp
+        && request.resource.data.status in ['pending', 'preparing', 'ready', 'delivered'];
+    }
+
+    function matchesPrivateOrder(orderId) {
+      let order = getAfter(/databases/$(database)/documents/orders/$(orderId)).data;
+      return request.resource.data.customer == order.customer
+        && request.resource.data.status == order.status
+        && request.resource.data.createdAt == order.createdAt;
+    }
+
+    match /orders/{orderId} {
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly(['customer', 'notes', 'items', 'status', 'createdAt',
+          'schemaVersion', 'eventId', 'timeZone', 'currency', 'isTest', 'channel', 'hasNotes',
+          'itemCount', 'lineCount', 'orderValueCents', 'updatedAt', 'preparationStartedAt', 'readyAt',
+          'deliveredAt', 'lastReopenedAt', 'cycle', 'reopenCount', 'statusRevision', 'lastEventId',
+          'historyComplete', 'historyStartedAt'])
+        && request.resource.data.customer is string
+        && request.resource.data.customer.size() > 0 && request.resource.data.customer.size() <= 40
+        && request.resource.data.notes is string && request.resource.data.notes.size() <= 200
+        && request.resource.data.status == 'pending'
+        && request.resource.data.createdAt == request.time
+        && validItems(request.resource.data.items)
+        && validNewMetrics() && hasMatchingHistory(orderId, true);
+
+      allow get, list: if isBarista();
+
+      allow update: if isBarista()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt',
+          'statusRevision', 'lastEventId', 'cycle', 'reopenCount', 'historyComplete',
+          'historyStartedAt', 'preparationStartedAt', 'readyAt', 'deliveredAt', 'lastReopenedAt'])
+        && request.resource.data.updatedAt == request.time
+        && validTransition() && validLifecycleUpdate() && hasMatchingHistory(orderId, false);
+
+      allow delete: if false;
+
+      match /events/{eventId} {
         allow get, list: if isBarista();
-
-        // Só o barista pode mudar status e data de atualização.
-        allow update: if isBarista()
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
-          && request.resource.data.status in ['pending', 'preparing', 'ready', 'delivered']
-          && request.resource.data.updatedAt == request.time;
-
-        allow delete: if false;
+        allow create: if request.auth != null && validHistoryEvent(orderId, eventId);
+        allow update, delete: if false;
       }
     }
+
+    match /orderStatus/{orderId} {
+      allow get, list: if request.auth != null
+        && (isBarista() || resource.data.status in ['pending', 'preparing', 'ready']);
+      allow create: if request.auth != null
+        && validPublicStatus() && matchesPrivateOrder(orderId)
+        && (isBarista() || (request.resource.data.status == 'pending'
+          && request.resource.data.createdAt == request.time));
+      allow update: if isBarista() && validPublicStatus() && matchesPrivateOrder(orderId);
+      allow delete: if false;
+    }
   }
+}
