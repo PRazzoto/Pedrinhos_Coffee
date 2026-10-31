@@ -1,0 +1,16 @@
+# Local Firebase configuration and environment variables
+/firebase-config.js
+.env
+.env.*
+!.env.example
+
+# Generated files and local tooling
+/dist/
+/node_modules/
+/.vercel/
+/output/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db

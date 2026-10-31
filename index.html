@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#f5f3eb" />
+  <title>Peça seu café</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body class="customer-page">
+  <div class="layout customer-layout" id="page-content">
+    <header class="topbar">
+      <div class="brand-lockup">
+        <svg class="brand-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M10 20h24v10a10 10 0 0 1-10 10h-4a10 10 0 0 1-10-10V20Z"/><path d="M34 23h3a5 5 0 0 1 0 10h-3M6 43h34M17 14c-4-5 4-5 0-10m9 10c-4-5 4-5 0-10" stroke-linecap="round"/></svg>
+        <div class="brand" id="brand">OS PEDRINHOS</div>
+      </div>
+    </header>
+    <main>
+      <section class="hero">
+        <div>
+          <h1>Um café,<br /><em>por favor.</em></h1>
+        </div>
+        <svg class="hero-illustration" viewBox="0 0 200 220" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+          <ellipse cx="96" cy="208" rx="53" ry="3" fill="currentColor" fill-opacity=".08" stroke="none"/>
+          <path d="M80 29c-8-8 8-10 0-18m27 18c-8-8 8-10 0-18" stroke-opacity=".65"/>
+          <path d="M133 74h23c11 0 17 7 15 18l-6 24c-2 7-6 11-13 11h-30l3-12h26c2 0 3-1 4-4l5-21c1-3-1-5-4-5h-25Z" fill="currentColor" fill-opacity=".13"/>
+          <path d="M58 65H38l24 26 8 39h52l12-65Z" fill="currentColor" fill-opacity=".035"/>
+          <path d="M58 65h16l8 65H70l-8-39Zm60 0h16l-12 65h-12Z" fill="currentColor" fill-opacity=".09" stroke="none"/>
+          <path d="m74 65 8 65m36-65-8 65" stroke-opacity=".6"/>
+          <path d="M55 61 74 49h44l19 12v4H55Z" fill="currentColor" fill-opacity=".07"/>
+          <path d="M74 49h44M55 61h82" stroke-opacity=".7"/>
+          <rect x="89" y="39" width="14" height="10" rx="3" fill="currentColor" fill-opacity=".16"/>
+          <rect x="68" y="130" width="56" height="9" rx="2" fill="currentColor" fill-opacity=".1"/>
+          <path d="M70 139h52l15 54a4 4 0 0 1-4 5H59a4 4 0 0 1-4-5Z" fill="currentColor" fill-opacity=".035"/>
+          <path d="M70 139h14l-7 59H59a4 4 0 0 1-4-5Zm38 0h14l15 54a4 4 0 0 1-4 5h-18Z" fill="currentColor" fill-opacity=".09" stroke="none"/>
+          <path d="m84 139-7 59m31-59 7 59" stroke-opacity=".6"/>
+          <circle cx="71" cy="156" r="3" fill="currentColor" fill-opacity=".12"/>
+          <path d="M56 198h80v4H56Z" fill="currentColor" fill-opacity=".12"/>
+        </svg>
+      </section>
+      <div class="ordering-layout">
+        <section class="menu-panel" aria-labelledby="menu-title">
+          <div class="section-heading"><h2 id="menu-title">Cardápio</h2></div>
+          <div id="connection" class="notice" role="status">Conectando…</div>
+          <div id="menu" class="menu-sections"></div>
+          <p id="cart-feedback" class="sr-only" role="status" aria-live="polite"></p>
+        </section>
+        <section id="checkout" class="checkout" aria-labelledby="checkout-title">
+          <div class="checkout-top">
+            <h2 id="checkout-title">Seu pedido</h2>
+            <button id="close-checkout" class="icon-button close-checkout" type="button" aria-label="Voltar ao cardápio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
+          </div>
+          <div id="cart-empty" class="empty-cart">
+            <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M13 26h32v14a13 13 0 0 1-13 13h-6a13 13 0 0 1-13-13V26Zm32 3h4a7 7 0 0 1 0 14h-4M8 58h43M24 18c-6-7 5-7 0-14m12 14c-6-7 5-7 0-14" stroke-linecap="round"/></svg>
+            <p>Pedido vazio</p>
+          </div>
+          <div id="cart-count" class="cart-count" hidden>0 bebidas</div>
+          <div id="cart-lines" class="cart-lines"></div>
+          <form id="order-form" hidden>
+            <label for="customer-name">Seu nome</label>
+            <input id="customer-name" name="customer" maxlength="40" autocomplete="off" required />
+            <details id="notes-details" class="notes-details">
+              <summary>Observações</summary>
+              <label class="sr-only" for="customer-notes">Observações do pedido</label>
+              <textarea id="customer-notes" rows="2" maxlength="200"></textarea>
+            </details>
+            <p id="order-error" class="form-error" role="alert" hidden></p>
+            <button type="submit" id="submit-order" class="primary-button" disabled><span>Enviar pedido</span><span aria-hidden="true">→</span></button>
+          </form>
+        </section>
+      </div>
+    </main>
+  </div>
+  <div id="checkout-backdrop" class="checkout-backdrop" hidden></div>
+  <div id="cart-dock" class="cart-dock" hidden>
+    <button id="review-order" class="primary-button" type="button" aria-controls="checkout" aria-expanded="false"><span><span id="dock-count" class="dock-count">0</span> Ver meu pedido</span><span aria-hidden="true">→</span></button>
+  </div>
+  <div id="confirmation" class="confirmation-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="success-title" aria-describedby="confirmation-name">
+    <div class="confirmation-card">
+      <div class="success-icon" aria-hidden="true">✓</div>
+      <h2 id="success-title">Pedido enviado!</h2>
+      <p id="confirmation-name">Seu pedido entrou na fila.</p>
+      <button id="new-order" class="primary-button" type="button"><span>Fazer outro pedido</span><span aria-hidden="true">→</span></button>
+    </div>
+  </div>
+  <noscript><p class="noscript-message">Ative o JavaScript no navegador para fazer seu pedido.</p></noscript>
+  <script type="module" src="./order.js"></script>
+</body>
+</html>

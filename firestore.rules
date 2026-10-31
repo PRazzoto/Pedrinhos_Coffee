@@ -1,0 +1,37 @@
+  rules_version = '2';
+  service cloud.firestore {
+    match /databases/{database}/documents {
+      function isBarista() {
+        // TROQUE PELO UID do usuário criado em Authentication > Users.
+        return request.auth != null && request.auth.uid == 'Hl70rVLXl9Oc8IffrvA8sI3RpPw1';
+      }
+
+      match /orders/{orderId} {
+        // Clientes anônimos podem somente CRIAR pedidos (não ler a fila).
+        allow create: if request.auth != null
+          && request.resource.data.keys().hasAll(['customer', 'notes', 'items', 'status', 'createdAt'])
+          && request.resource.data.keys().hasOnly(['customer', 'notes', 'items', 'status', 'createdAt'])
+          && request.resource.data.customer is string
+          && request.resource.data.customer.size() > 0
+          && request.resource.data.customer.size() <= 40
+          && request.resource.data.notes is string
+          && request.resource.data.notes.size() <= 200
+          && request.resource.data.items is list
+          && request.resource.data.items.size() > 0
+          && request.resource.data.items.size() <= 12
+          && request.resource.data.status == 'pending'
+          && request.resource.data.createdAt == request.time;
+
+        // Só o barista pode consultar os pedidos.
+        allow get, list: if isBarista();
+
+        // Só o barista pode mudar status e data de atualização.
+        allow update: if isBarista()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
+          && request.resource.data.status in ['pending', 'preparing', 'ready', 'delivered']
+          && request.resource.data.updatedAt == request.time;
+
+        allow delete: if false;
+      }
+    }
+  }
