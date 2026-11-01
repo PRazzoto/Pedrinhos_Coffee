@@ -23,6 +23,14 @@ Não há pagamentos, estoque nem servidor próprio. HTML/CSS/JS + Firebase Authe
 
 Para adicionar outro barista no futuro, crie o usuário em **Authentication > Users**, inclua o novo UID na lista de `isBarista()` e publique as regras novamente. Cadastrar apenas o e-mail não concede acesso aos pedidos.
 
+## Visualizar o relatório depois do evento
+
+Acesse `/metricas.html` no site publicado e entre com uma conta já autorizada no painel do barista. A tela lê os pedidos do Firestore diretamente no navegador, sem publicar nomes dos convidados. Use o filtro de data para separar o dia do evento, marque **Incluir pedidos de teste** apenas quando desejar e use **Exportar CSV** para salvar o resumo agregado.
+
+Os indicadores incluem bebidas e combinações mais pedidas, temperatura, xarope, recomendação da noiva, pedidos por hora/15 minutos, status final e tempos de atendimento. O botão **Carregar histórico dos baristas** consulta os eventos privados para contar preparos iniciados e entregas confirmadas por conta.
+
+O relatório carrega **todos** os pedidos em páginas de 250 (diferentemente da fila operacional, limitada a 200). Ele não inventa tempos faltantes: pedidos legados ou reabertos não entram nas médias operacionais. Os indicadores dependem de os baristas terem marcado as etapas no momento correto. A exportação CSV contém apenas totais agregados, sem nomes.
+
 ## Métricas futuras
 
 Os pedidos registram bebida/receita, temperatura, xarope, quantidade, destaque da noiva, evento, fuso horário, marcação de teste e o horário de cada etapa. As mudanças ficam em um histórico com o UID do barista, revisão sequencial e ciclos de reabertura.
