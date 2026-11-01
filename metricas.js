@@ -285,7 +285,7 @@ $('login-form').addEventListener('submit', async (event) => {
   }
 });
 $('logout-button').addEventListener('click', async () => { ++requestVersion; await signOut(auth); });
-$('date-filter').addEventListener('change', () => { render(); baristasLoaded = false; render(); });
+$('date-filter').addEventListener('change', () => { baristasLoaded = false; render(); });
 $('include-tests').addEventListener('change', () => { baristasLoaded = false; render(); });
 $('refresh-button').addEventListener('click', loadOrders);
 $('barista-button').addEventListener('click', loadBaristaEvents);
