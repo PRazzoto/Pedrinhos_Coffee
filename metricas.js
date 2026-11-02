@@ -4,6 +4,7 @@ import { getFirestore, collection, query, orderBy, limit, startAfter, getDocs } 
 import { firebaseConfig, firebaseConfigured } from './firebase-config.js';
 import { cafeName, eventSettings } from './menu.js';
 import { localDay, summarizeOrders } from './metrics-summary.js';
+import { createRevenueWidget } from './revenue-widget.js';
 
 const $ = (id) => document.getElementById(id);
 $('brand').textContent = cafeName;
@@ -16,6 +17,9 @@ let eventCache = {};
 let currentSummary = null;
 let requestVersion = 0;
 let baristasLoaded = false;
+let historyVersion = 0;
+let loadingOrders = false;
+const revenue = createRevenueWidget($('revenue-simulation'));
 
 const number = (value) => Number(value || 0).toLocaleString('pt-BR');
 const minutes = (value) => value == null ? '—' : value.toLocaleString('pt-BR', { maximumFractionDigits: 1 });
@@ -33,10 +37,14 @@ function setView(loggedIn) {
   $('login-view').hidden = loggedIn;
   $('metrics-view').hidden = !loggedIn;
   if (!loggedIn) {
+    ++requestVersion;
+    ++historyVersion;
     $('metrics-content').hidden = true;
     allOrders = [];
     eventCache = {};
     currentSummary = null;
+    baristasLoaded = false;
+    revenue.update([], {});
   }
 }
 
@@ -119,7 +127,7 @@ function renderBaristas(summary) {
 }
 
 function render() {
-  if (!allOrders) return;
+  if (loadingOrders) return;
   const day = $('date-filter').value;
   currentSummary = summarizeOrders(allOrders, {
     date: day,
@@ -136,6 +144,7 @@ function render() {
   renderRanking('hour-ranking', m.hours, 24);
   renderTimes(m);
   renderBaristas(m);
+  revenue.update(allOrders, { date: day, includeTests: $('include-tests').checked, timeZone: eventSettings.timeZone });
   $('peak-description').textContent = m.peakQuarter
     ? 'Faixa de 15 minutos mais movimentada: ' + m.peakQuarter.name + ' (' + number(m.peakQuarter.count) + ' pedidos).' +
       (day === 'all' ? ' Somando todas as datas selecionadas.' : '')
@@ -160,6 +169,13 @@ function updateDates() {
 
 async function loadOrders() {
   const version = ++requestVersion;
+  ++historyVersion;
+  loadingOrders = true;
+  allOrders = [];
+  eventCache = {};
+  baristasLoaded = false;
+  currentSummary = null;
+  $('export-button').disabled = true;
   $('refresh-button').disabled = true;
   $('barista-button').disabled = true;
   $('metrics-content').hidden = true;
@@ -178,16 +194,20 @@ async function loadOrders() {
       cursor = snapshot.docs[snapshot.docs.length - 1];
     }
     allOrders = rows;
+    loadingOrders = false;
+    $('barista-button').textContent = 'Carregar histórico dos baristas';
     updateDates();
     render();
     status(number(rows.length) + ' pedidos carregados do Firestore. Filtre a data para ver apenas o evento.');
   } catch (error) {
+    if (version !== requestVersion) return;
     console.error(error);
     status(error?.code === 'permission-denied'
       ? 'Esta conta não tem autorização para consultar pedidos. Entre com um dos usuários cadastrados como barista no Firestore.'
       : 'Não foi possível carregar os dados. Confira sua conexão e as regras do Firestore.', true);
   } finally {
     if (version === requestVersion) {
+      loadingOrders = false;
       $('refresh-button').disabled = false;
       $('barista-button').disabled = false;
     }
@@ -195,6 +215,7 @@ async function loadOrders() {
 }
 
 async function loadBaristaEvents() {
+  const version = ++historyVersion;
   const button = $('barista-button');
   button.disabled = true;
   const rows = selectedOrders().filter(({ id, data }) =>
@@ -204,10 +225,11 @@ async function loadBaristaEvents() {
   let cursor = 0;
   // A small worker pool limits concurrent Firestore requests.
   async function worker() {
-    while (cursor < rows.length) {
+    while (version === historyVersion && cursor < rows.length) {
       const row = rows[cursor++];
       try {
         const snapshot = await getDocs(collection(db, 'orders', row.id, 'events'));
+        if (version !== historyVersion) return;
         eventCache[row.id] = snapshot.docs.map((record) => record.data());
       } catch (error) {
         failures++;
@@ -216,6 +238,7 @@ async function loadBaristaEvents() {
     }
   }
   await Promise.all(Array.from({ length: Math.min(6, rows.length) }, worker));
+  if (version !== historyVersion) return;
   baristasLoaded = true;
   render();
   status(failures
@@ -257,6 +280,7 @@ function exportCsv() {
       ['Barista: preparos iniciados', 'Barista ' + (i + 1), v.started],
       ['Barista: entregas confirmadas', 'Barista ' + (i + 1), v.delivered],
     ]),
+    ...revenue.csvRows(),
   ];
   const csv = '\uFEFF' + rows.map((row) => row.map(csvCell).join(';')).join('\r\n');
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });

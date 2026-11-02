@@ -58,8 +58,33 @@
     .metrics-page .pills { display: flex; flex-wrap: wrap; gap: 8px; }
     .metrics-page .pill { padding: 8px 10px; background: var(--blue-soft); color: var(--blue); border-radius: 8px; font-size: 12px; }
     .metrics-page .warning { padding: 14px 17px; border-left: 3px solid var(--blue-line); background: var(--paper); border-radius: 4px; font-size: 13px; line-height: 1.6; }
+    .metrics-page .simulation { border-color: var(--blue-line); }
+    .metrics-page .simulation-heading { display: flex; justify-content: space-between; align-items: start; gap: 20px; flex-wrap: wrap; }
+    .metrics-page .simulation h2 { margin-bottom: 8px; }
+    .metrics-page .simulation-heading .help { margin: 0 0 22px; max-width: 540px; }
+    .metrics-page .simulation-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; padding: 22px 0; border-block: 1px solid var(--line); }
+    .metrics-page .simulation-grid .metric-value { font-size: clamp(24px, 3.4vw, 38px); overflow-wrap: anywhere; }
+    .metrics-page .simulation-grid .metric-label { margin-bottom: 8px; }
+    .metrics-page .simulation-table { min-width: 460px; }
+    .metrics-page .simulation-table th { text-transform: none; letter-spacing: normal; }
+    .metrics-page .simulation-table tbody th { color: var(--ink); font-weight: 400; }
+    .metrics-page .simulation input { font: inherit; font-size: 16px; width: 106px; padding: 10px; border: 1px solid var(--blue-line); border-radius: 8px; background: white; color: var(--ink); text-align: right; }
+    .metrics-page .simulation input[aria-invalid="true"] { border-color: var(--error); }
+    .metrics-page .simulation details { margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--line); }
+    .metrics-page .simulation summary { cursor: pointer; color: var(--blue); font-size: 14px; font-weight: 600; }
+    .metrics-page .simulation-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin: 18px 0; }
+    .metrics-page .simulation-field { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; margin: 0; }
+    .metrics-page .simulation-heading .filter-label { margin: 0 0 18px; }
+    .metrics-page .simulation-field input { flex-shrink: 0; }
+    .metrics-page .simulation-field[hidden] { display: none; }
+    .metrics-page .simulation-cost-totals { display: grid; gap: 14px; font-size: 14px; margin: 22px 0 0; }
+    .metrics-page .simulation-cost-totals div { display: flex; justify-content: space-between; gap: 16px; }
+    .metrics-page .simulation-cost-totals dd { margin: 0; font-variant-numeric: tabular-nums; }
+    .metrics-page .simulation-balance { color: var(--blue); font-weight: 700; padding-top: 14px; border-top: 1px solid var(--line); }
+    .metrics-page .check-label input { width: auto; margin: 0; }
     @media (max-width: 850px) { .metrics-page .metrics-grid { grid-template-columns: repeat(2, 1fr); } .metrics-page .columns { grid-template-columns: 1fr; } }
     @media (max-width: 530px) { .metrics-page .layout { padding: 0 20px; } .metrics-page .metrics-grid { grid-template-columns: 1fr 1fr; } .metrics-page .metrics-card { padding: 15px; } .metrics-page .metric-value { font-size: 32px; } .metrics-page .filters { padding: 14px; } }
+    @media (max-width: 530px) { .metrics-page .simulation-grid { grid-template-columns: 1fr; gap: 20px; } .metrics-page .simulation-grid .metric-value { font-size: 34px; } .metrics-page .simulation-heading .filter-label, .metrics-page .simulation-heading select { width: 100%; } }
   </style>
 </head>
 <body class="metrics-page">
@@ -97,6 +122,48 @@
         <p id="status-line" role="status" aria-live="polite">Carregando…</p>
         <div id="metrics-content" hidden>
           <div class="metrics-grid" id="key-metrics"></div>
+          <section class="metrics-section metrics-card simulation" id="revenue-simulation" aria-labelledby="simulation-title">
+            <div class="simulation-heading">
+              <div>
+                <h2 id="simulation-title">E se fosse uma cafeteria?</h2>
+                <p class="help">Quantidades reais × preços de exemplo editáveis, em reais. Uma simulação de vendas, sem pagamentos registrados.</p>
+              </div>
+              <label class="filter-label" for="simulation-scope">Base do cálculo
+                <select id="simulation-scope"><option value="delivered">Pedidos entregues</option><option value="all">Todos os pedidos (potencial)</option></select>
+              </label>
+            </div>
+            <div class="simulation-grid">
+              <div><p class="metric-label" id="simulation-revenue-label">Receita simulada</p><p class="metric-value" id="simulation-revenue">—</p></div>
+              <div><p class="metric-label">Ticket médio por pedido</p><p class="metric-value" id="simulation-ticket">—</p></div>
+              <div><p class="metric-label">Valor médio por bebida</p><p class="metric-value" id="simulation-drink">—</p></div>
+            </div>
+            <p class="help" id="simulation-coverage" role="status" aria-live="polite"></p>
+            <div class="metrics-table-wrap">
+              <table class="metrics-table simulation-table">
+                <caption class="help">Edite os preços para testar seu cenário. A recomendação da noiva usa o preço do iced latte.</caption>
+                <thead><tr><th scope="col">Bebida</th><th scope="col">Qtd.</th><th scope="col">Preço (R$)</th><th scope="col">Receita</th></tr></thead>
+                <tbody id="simulation-price-rows"></tbody>
+              </table>
+            </div>
+            <details>
+              <summary>Simular custos e despesas</summary>
+              <p class="help">Informe o custo de uma unidade de cada bebida: ingredientes, xarope, copo e outros consumíveis. Campos vazios ficam sem estimativa.</p>
+              <div class="simulation-fields" id="simulation-cost-inputs"></div>
+              <div class="simulation-fields">
+                <label class="simulation-field"><span>Despesas do período (R$)</span><input id="simulation-fixed-cost" type="text" inputmode="decimal" maxlength="11" value="0,00" aria-describedby="simulation-fixed-help"></label>
+                <label class="simulation-field"><span>Taxas sobre a receita (%)</span><input id="simulation-fees" type="text" inputmode="decimal" maxlength="6" value="0,00" aria-describedby="simulation-fee-help"></label>
+              </div>
+              <p class="help" id="simulation-fixed-help">Despesas do período selecionado: equipe, aluguel, energia e demais gastos. Ajuste este valor ao mudar a data; ele não é rateado automaticamente.</p>
+              <p class="help" id="simulation-fee-help">Percentual combinado de taxas de pagamento e tributos que você quiser assumir. Despesas e taxas começam em zero.</p>
+              <dl class="simulation-cost-totals">
+                <div><dt>Custos das bebidas</dt><dd id="simulation-variable-total">—</dd></div>
+                <div><dt>Taxas sobre a receita</dt><dd id="simulation-fee-total">—</dd></div>
+                <div class="simulation-balance"><dt>Saldo após custos informados</dt><dd id="simulation-balance">—</dd></div>
+              </dl>
+              <p class="help" id="simulation-cost-status" role="status" aria-live="polite"></p>
+            </details>
+            <p class="help">A simulação acompanha os filtros de data e testes acima. Alterações valem nesta sessão; exporte o CSV para guardar os resultados e as premissas.</p>
+          </section>
           <div class="metrics-section columns">
             <section class="metrics-card"><h2>Bebidas mais pedidas</h2><div id="product-ranking" class="ranking"></div></section>
             <section class="metrics-card"><h2>Quentes ou gelados?</h2><div id="temperature-ranking" class="ranking"></div><h3 style="margin-top:28px">Preferência por xarope</h3><div id="syrup-ranking" class="ranking"></div></section>
