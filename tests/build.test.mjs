@@ -7,7 +7,7 @@ import { basename, dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const root = new URL('../', import.meta.url);
-const assets = ['index.html', 'barista.html', 'acompanhamento.html', 'styles.css', 'menu.js', 'order.js', 'barista.js', 'acompanhamento.js', 'order-status.js', 'order-metrics.js'];
+const assets = ['index.html', 'barista.html', 'acompanhamento.html', 'styles.css', 'menu.js', 'order.js', 'barista.js', 'acompanhamento.js', 'order-status.js', 'order-metrics.js', 'metricas.html', 'metricas.js', 'metrics-summary.js', 'revenue-simulation.js', 'revenue-widget.js'];
 const required = {
   FIREBASE_API_KEY: 'test-api-key',
   FIREBASE_AUTH_DOMAIN: 'test-project.firebaseapp.com',

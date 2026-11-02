@@ -23,7 +23,23 @@ Não há pagamentos, estoque nem servidor próprio. HTML/CSS/JS + Firebase Authe
 
 Para adicionar outro barista no futuro, crie o usuário em **Authentication > Users**, inclua o novo UID na lista de `isBarista()` e publique as regras novamente. Cadastrar apenas o e-mail não concede acesso aos pedidos.
 
-## Métricas futuras
+## Visualizar o relatório depois do evento
+
+Acesse `/metricas.html` no site publicado e entre com uma conta já autorizada no painel do barista. A tela lê os pedidos do Firestore diretamente no navegador, sem publicar nomes dos convidados. Use o filtro de data para separar o dia do evento, marque **Incluir pedidos de teste** apenas quando desejar e use **Exportar CSV** para salvar o resumo agregado.
+
+Os indicadores incluem bebidas e combinações mais pedidas, temperatura, xarope, recomendação da noiva, pedidos por hora/15 minutos, status final e tempos de atendimento. O botão **Carregar histórico dos baristas** consulta os eventos privados para contar preparos iniciados e entregas confirmadas por conta.
+
+O relatório carrega **todos** os pedidos em páginas de 250 (diferentemente da fila operacional, limitada a 200). Ele não inventa tempos faltantes: pedidos legados ou reabertos não entram nas médias operacionais. Os indicadores dependem de os baristas terem marcado as etapas no momento correto. A exportação CSV contém apenas totais agregados, sem nomes. Use **Atualizar dados** para buscar mudanças recentes.
+
+## Simulação de cafeteria
+
+Em **E se fosse uma cafeteria?**, as quantidades dos pedidos entregues são multiplicadas por preços hipotéticos editáveis em BRL. Os valores iniciais são apenas exemplos: Cappuccino R$ 12, Latte quente R$ 14, Iced latte R$ 16, Americano R$ 8 e Macchiato R$ 9. A recomendação da noiva compartilha o preço do iced latte e cada unidade é contada uma vez. Para bebidas antigas sem identificação suficiente, preencha os preços extras exibidos; um preço desconhecido não é tratado como zero.
+
+O total, o ticket médio por pedido e o valor médio por bebida acompanham os filtros do relatório. Escolha **Todos os pedidos (potencial)** para incluir também os que ainda não foram entregues. A seleção é pelo status atual e pela data de criação, não pela data da entrega.
+
+Para explorar custos, abra **Simular custos e despesas**, informe o custo unitário de cada bebida vendida, as despesas do período e o percentual de taxas sobre a receita. O saldo só é calculado quando os dados necessários estão preenchidos. Despesas e taxas começam em zero; ajuste as despesas ao mudar o período. Este saldo inclui apenas os gastos informados, sem representar lucro líquido apurado.
+
+Os preços e custos ficam apenas na sessão da página. **Exportar CSV** guarda os resultados e todas as premissas do cenário, sem nomes de convidados. A simulação não altera o cardápio nem os pedidos no Firestore e não comprova receita ou pagamentos recebidos.
 
 Os pedidos registram bebida/receita, temperatura, xarope, quantidade, destaque da noiva, evento, fuso horário, marcação de teste e o horário de cada etapa. As mudanças ficam em um histórico com o UID do barista, revisão sequencial e ciclos de reabertura.
 
@@ -56,6 +72,7 @@ python -m http.server 8080
 - Cliente: http://localhost:8080/
 - Barista: http://localhost:8080/barista.html
 - Acompanhamento: http://localhost:8080/acompanhamento.html
+- Métricas e simulação: http://localhost:8080/metricas.html
 
 Abra a tela barista em outra janela, entre com o e-mail e a senha, faça um pedido na tela cliente e confirme que aparece na fila.
 Teste também mudar para **Preparando → Pronto → Entregue**, conferindo que o acompanhamento muda de coluna e remove os pedidos entregues.

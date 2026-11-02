@@ -69,6 +69,12 @@ Conte cada `orderId` uma vez nas métricas de demanda, mesmo se houver reabertur
 
 ## Limites dos dados
 
+O painel `/metricas.html` inclui uma simulação financeira calculada em centavos inteiros por `revenue-simulation.js`. Receita hipotética = soma de `qty × preço informado` por bebida; ticket médio = receita ÷ pedidos considerados; valor médio por bebida = receita ÷ soma de `qty`. A base padrão são os pedidos com status atual `delivered`, excluindo testes. Os filtros usam a data de criação no fuso do evento. A base alternativa de todos os pedidos representa receita potencial.
+
+Latte quente e gelado têm preços independentes; a recomendação entra no grupo gelado. Itens antigos desconhecidos exigem um preço explícito. Se faltar preço para qualquer unidade ou houver quantidade inválida, o total e as médias ficam indisponíveis, com o parcial identificado separadamente. Os exemplos iniciais não são valores de mercado pesquisados nem preços históricos.
+
+Saldo simulado = receita − soma de `qty × custo unitário` − despesas do período − taxas sobre a receita (arredondadas ao centavo). Custos unitários começam desconhecidos; despesas e taxas começam em zero. O saldo não é apuração contábil de lucro. Não há rateio automático de despesas entre datas. O CSV inclui base, filtros, moeda, preços, custos, taxas, cobertura e resultados. Não são gravadas alterações no Firestore.
+
 Pedidos antigos continuam utilizáveis. Seus horários anteriores não são reconstruídos: ao mudar de status pela primeira vez nesta versão, recebem `historyComplete: false` e horários apenas das etapas efetivamente registradas. Intervalos com algum horário ausente devem ficar desconhecidos; não os preencha com zero nem com `updatedAt`.
 
 Não trate o nome como identificador único de cliente. Não existe medição de tempo de navegação ou abandono antes do envio. Valores do cardápio são informativos: não comprovam pagamento nem receita recebida. Os tempos refletem os cliques do barista; marcarem as etapas no momento correto é essencial.

@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#f5f3eb" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Métricas · OS PEDRINHOS</title>
+  <link rel="stylesheet" href="./styles.css" />
+  <style>
+    .metrics-page main { padding: 38px 0 90px; }
+    .metrics-page .topbar a { color: inherit; text-decoration: none; }
+    .metrics-page .topbar a:hover { text-decoration: underline; }
+    .metrics-page h1 { font-size: clamp(36px, 5vw, 60px); }
+    .metrics-page h2 { font-size: 26px; margin: 0 0 20px; }
+    .metrics-page h3 { font-size: 18px; margin: 0 0 8px; }
+    .metrics-page .subtitle { color: var(--muted); margin-bottom: 28px; line-height: 1.6; }
+    .metrics-page .eyebrow { font-size: 11px; letter-spacing: .13em; color: var(--blue); text-transform: uppercase; font-weight: 700; margin-bottom: 10px; }
+    .metrics-page .metrics-header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: start; gap: 18px; }
+    .metrics-page .metrics-header h1 { margin-bottom: 10px; }
+    .metrics-page .filters { display: flex; align-items: end; flex-wrap: wrap; gap: 14px; padding: 20px; background: var(--paper); border: 1px solid var(--line); border-radius: 12px; margin: 20px 0 18px; }
+    .metrics-page .filter-label { display: grid; gap: 7px; font-size: 13px; color: var(--muted); }
+    .metrics-page select { font: inherit; font-size: 15px; padding: 10px 12px; min-width: 160px; background: white; border: 1px solid var(--blue-line); border-radius: 8px; color: var(--ink); }
+    .metrics-page .check-label { display: flex; align-items: center; gap: 8px; font-size: 13px; padding-bottom: 13px; }
+    .metrics-page button { min-height: 42px; padding: 10px 16px; border-radius: 8px; border: 1px solid var(--blue-line); color: var(--blue); background: var(--paper); font-weight: 600; }
+    .metrics-page button:hover:not(:disabled) { background: var(--blue-soft); }
+    .metrics-page .button-primary { background: var(--blue); color: white; }
+    .metrics-page .button-primary:hover:not(:disabled) { background: var(--blue-hover); }
+    .metrics-page .metrics-nav { display: flex; align-items: center; gap: 14px; }
+    .metrics-page .metrics-nav a { color: var(--blue); font-size: 13px; }
+    .metrics-page #login-view { max-width: 480px; }
+    .metrics-page .metrics-login { display: grid; gap: 12px; }
+    .metrics-page .metrics-login label { font-size: 13px; }
+    .metrics-page .metrics-login input { width: 100%; padding: 13px; border: 1px solid var(--blue-line); border-radius: 8px; background: white; }
+    .metrics-page .metrics-login button { margin-top: 10px; }
+    .metrics-page .metrics-section { margin-top: 34px; }
+    .metrics-page .metrics-grid { display: grid; gap: 14px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .metrics-page .metrics-card { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 22px; }
+    .metrics-page .metric-label { font-size: 12px; color: var(--muted); margin: 0 0 12px; line-height: 1.4; }
+    .metrics-page .metric-value { font: 42px Georgia, serif; font-variant-numeric: tabular-nums; margin: 0; }
+    .metrics-page .metric-description { font-size: 11px; color: var(--muted); margin: 8px 0 0; }
+    .metrics-page .columns { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+    .metrics-page .ranking { display: grid; gap: 15px; }
+    .metrics-page .ranking-row { display: grid; gap: 5px; }
+    .metrics-page .ranking-heading { display: flex; gap: 12px; justify-content: space-between; font-size: 13px; }
+    .metrics-page .ranking-heading strong { font-variant-numeric: tabular-nums; }
+    .metrics-page .track { background: var(--blue-soft); border-radius: 100px; height: 7px; overflow: hidden; }
+    .metrics-page .fill { background: var(--blue); border-radius: 100px; height: 100%; min-width: 2px; }
+    .metrics-page .metrics-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
+    .metrics-page .metrics-table th, .metrics-page .metrics-table td { padding: 12px 10px; border-bottom: 1px solid var(--line); }
+    .metrics-page .metrics-table th { color: var(--muted); font-weight: 600; }
+    .metrics-page .metrics-table td:not(:first-child), .metrics-page .metrics-table th:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; }
+    .metrics-page .metrics-table-wrap { overflow-x: auto; }
+    .metrics-page .empty { color: var(--muted); font-size: 13px; }
+    .metrics-page .help { color: var(--muted); line-height: 1.6; font-size: 12px; margin-top: 16px; }
+    .metrics-page #status-line { margin: 14px 0; min-height: 18px; font-size: 13px; color: var(--muted); }
+    .metrics-page #status-line.error, .metrics-page #login-error { color: var(--error); }
+    .metrics-page .pills { display: flex; flex-wrap: wrap; gap: 8px; }
+    .metrics-page .pill { padding: 8px 10px; background: var(--blue-soft); color: var(--blue); border-radius: 8px; font-size: 12px; }
+    .metrics-page .warning { padding: 14px 17px; border-left: 3px solid var(--blue-line); background: var(--paper); border-radius: 4px; font-size: 13px; line-height: 1.6; }
+    .metrics-page .simulation { border-color: var(--blue-line); }
+    .metrics-page .simulation-heading { display: flex; justify-content: space-between; align-items: start; gap: 20px; flex-wrap: wrap; }
+    .metrics-page .simulation h2 { margin-bottom: 8px; }
+    .metrics-page .simulation-heading .help { margin: 0 0 22px; max-width: 540px; }
+    .metrics-page .simulation-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; padding: 22px 0; border-block: 1px solid var(--line); }
+    .metrics-page .simulation-grid .metric-value { font-size: clamp(24px, 3.4vw, 38px); overflow-wrap: anywhere; }
+    .metrics-page .simulation-grid .metric-label { margin-bottom: 8px; }
+    .metrics-page .simulation-table { min-width: 460px; }
+    .metrics-page .simulation-table th { text-transform: none; letter-spacing: normal; }
+    .metrics-page .simulation-table tbody th { color: var(--ink); font-weight: 400; }
+    .metrics-page .simulation input { font: inherit; font-size: 16px; width: 106px; padding: 10px; border: 1px solid var(--blue-line); border-radius: 8px; background: white; color: var(--ink); text-align: right; }
+    .metrics-page .simulation input[aria-invalid="true"] { border-color: var(--error); }
+    .metrics-page .simulation details { margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--line); }
+    .metrics-page .simulation summary { cursor: pointer; color: var(--blue); font-size: 14px; font-weight: 600; }
+    .metrics-page .simulation-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin: 18px 0; }
+    .metrics-page .simulation-field { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; margin: 0; }
+    .metrics-page .simulation-heading .filter-label { margin: 0 0 18px; }
+    .metrics-page .simulation-field input { flex-shrink: 0; }
+    .metrics-page .simulation-field[hidden] { display: none; }
+    .metrics-page .simulation-cost-totals { display: grid; gap: 14px; font-size: 14px; margin: 22px 0 0; }
+    .metrics-page .simulation-cost-totals div { display: flex; justify-content: space-between; gap: 16px; }
+    .metrics-page .simulation-cost-totals dd { margin: 0; font-variant-numeric: tabular-nums; }
+    .metrics-page .simulation-balance { color: var(--blue); font-weight: 700; padding-top: 14px; border-top: 1px solid var(--line); }
+    .metrics-page .check-label input { width: auto; margin: 0; }
+    @media (max-width: 850px) { .metrics-page .metrics-grid { grid-template-columns: repeat(2, 1fr); } .metrics-page .columns { grid-template-columns: 1fr; } }
+    @media (max-width: 530px) { .metrics-page .layout { padding: 0 20px; } .metrics-page .metrics-grid { grid-template-columns: 1fr 1fr; } .metrics-page .metrics-card { padding: 15px; } .metrics-page .metric-value { font-size: 32px; } .metrics-page .filters { padding: 14px; } }
+    @media (max-width: 530px) { .metrics-page .simulation-grid { grid-template-columns: 1fr; gap: 20px; } .metrics-page .simulation-grid .metric-value { font-size: 34px; } .metrics-page .simulation-heading .filter-label, .metrics-page .simulation-heading select { width: 100%; } }
+  </style>
+</head>
+<body class="metrics-page">
+  <div class="layout">
+    <header class="topbar">
+      <div class="brand-lockup">
+        <svg class="brand-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M10 20h24v10a10 10 0 0 1-10 10h-4a10 10 0 0 1-10-10V20Z"/><path d="M34 23h3a5 5 0 0 1 0 10h-3M6 43h34M17 14c-4-5 4-5 0-10m9 10V2" stroke-linecap="round"/></svg>
+        <div class="brand" id="brand">OS PEDRINHOS</div>
+      </div>
+      <a href="./barista.html">Voltar ao painel de pedidos</a>
+    </header>
+    <main>
+      <section id="login-view">
+        <p class="eyebrow">Relatório do evento</p>
+        <h1>Os cafés em números.</h1>
+        <p class="subtitle">Use a mesma conta autorizada no painel do barista. Nenhum pedido individual ou nome de convidado é exibido aqui.</p>
+        <form id="login-form" class="metrics-login">
+          <label for="email">E-mail</label><input id="email" type="email" autocomplete="username" required>
+          <label for="password">Senha</label><input id="password" type="password" autocomplete="current-password" required>
+          <button type="submit" class="button-primary" id="login-button">Entrar e ver relatório</button>
+        </form>
+        <p id="login-error" role="alert"></p>
+      </section>
+      <section id="metrics-view" hidden>
+        <div class="metrics-header">
+          <div><p class="eyebrow">Relatório do evento</p><h1>Os cafés em números.</h1><p class="subtitle">Dados reais dos pedidos registrados no Firestore.</p></div>
+          <div class="metrics-nav"><a href="./barista.html">Pedidos</a><button type="button" id="logout-button">Sair</button></div>
+        </div>
+        <div class="filters">
+          <label class="filter-label" for="date-filter">Data do evento <select id="date-filter"><option value="all">Todas as datas</option></select></label>
+          <label class="check-label"><input type="checkbox" id="include-tests"> Incluir pedidos de teste</label>
+          <button type="button" id="refresh-button">Atualizar dados</button>
+          <button type="button" id="export-button" disabled>Exportar CSV</button>
+        </div>
+        <p id="status-line" role="status" aria-live="polite">Carregando…</p>
+        <div id="metrics-content" hidden>
+          <div class="metrics-grid" id="key-metrics"></div>
+          <section class="metrics-section metrics-card simulation" id="revenue-simulation" aria-labelledby="simulation-title">
+            <div class="simulation-heading">
+              <div>
+                <h2 id="simulation-title">E se fosse uma cafeteria?</h2>
+                <p class="help">Quantidades reais × preços de exemplo editáveis, em reais. Uma simulação de vendas, sem pagamentos registrados.</p>
+              </div>
+              <label class="filter-label" for="simulation-scope">Base do cálculo
+                <select id="simulation-scope"><option value="delivered">Pedidos entregues</option><option value="all">Todos os pedidos (potencial)</option></select>
+              </label>
+            </div>
+            <div class="simulation-grid">
+              <div><p class="metric-label" id="simulation-revenue-label">Receita simulada</p><p class="metric-value" id="simulation-revenue">—</p></div>
+              <div><p class="metric-label">Ticket médio por pedido</p><p class="metric-value" id="simulation-ticket">—</p></div>
+              <div><p class="metric-label">Valor médio por bebida</p><p class="metric-value" id="simulation-drink">—</p></div>
+            </div>
+            <p class="help" id="simulation-coverage" role="status" aria-live="polite"></p>
+            <div class="metrics-table-wrap">
+              <table class="metrics-table simulation-table">
+                <caption class="help">Edite os preços para testar seu cenário. A recomendação da noiva usa o preço do iced latte.</caption>
+                <thead><tr><th scope="col">Bebida</th><th scope="col">Qtd.</th><th scope="col">Preço (R$)</th><th scope="col">Receita</th></tr></thead>
+                <tbody id="simulation-price-rows"></tbody>
+              </table>
+            </div>
+            <details>
+              <summary>Simular custos e despesas</summary>
+              <p class="help">Informe o custo de uma unidade de cada bebida: ingredientes, xarope, copo e outros consumíveis. Campos vazios ficam sem estimativa.</p>
+              <div class="simulation-fields" id="simulation-cost-inputs"></div>
+              <div class="simulation-fields">
+                <label class="simulation-field"><span>Despesas do período (R$)</span><input id="simulation-fixed-cost" type="text" inputmode="decimal" maxlength="11" value="0,00" aria-describedby="simulation-fixed-help"></label>
+                <label class="simulation-field"><span>Taxas sobre a receita (%)</span><input id="simulation-fees" type="text" inputmode="decimal" maxlength="6" value="0,00" aria-describedby="simulation-fee-help"></label>
+              </div>
+              <p class="help" id="simulation-fixed-help">Despesas do período selecionado: equipe, aluguel, energia e demais gastos. Ajuste este valor ao mudar a data; ele não é rateado automaticamente.</p>
+              <p class="help" id="simulation-fee-help">Percentual combinado de taxas de pagamento e tributos que você quiser assumir. Despesas e taxas começam em zero.</p>
+              <dl class="simulation-cost-totals">
+                <div><dt>Custos das bebidas</dt><dd id="simulation-variable-total">—</dd></div>
+                <div><dt>Taxas sobre a receita</dt><dd id="simulation-fee-total">—</dd></div>
+                <div class="simulation-balance"><dt>Saldo após custos informados</dt><dd id="simulation-balance">—</dd></div>
+              </dl>
+              <p class="help" id="simulation-cost-status" role="status" aria-live="polite"></p>
+            </details>
+            <p class="help">A simulação acompanha os filtros de data e testes acima. Alterações valem nesta sessão; exporte o CSV para guardar os resultados e as premissas.</p>
+          </section>
+          <div class="metrics-section columns">
+            <section class="metrics-card"><h2>Bebidas mais pedidas</h2><div id="product-ranking" class="ranking"></div></section>
+            <section class="metrics-card"><h2>Quentes ou gelados?</h2><div id="temperature-ranking" class="ranking"></div><h3 style="margin-top:28px">Preferência por xarope</h3><div id="syrup-ranking" class="ranking"></div></section>
+          </div>
+          <div class="metrics-section columns">
+            <section class="metrics-card"><h2>Combinações de bebidas</h2><div id="variant-ranking" class="ranking"></div></section>
+            <section class="metrics-card"><h2>Pedidos por hora</h2><div id="hour-ranking" class="ranking"></div><p class="help" id="peak-description"></p></section>
+          </div>
+          <section class="metrics-section metrics-card">
+            <h2>Tempos de atendimento</h2>
+            <div class="metrics-table-wrap"><table class="metrics-table"><thead><tr><th>Etapa</th><th>Média</th><th>Mediana</th><th>P90</th><th>Amostras</th></tr></thead><tbody id="time-table"></tbody></table></div>
+            <p class="help">Tempos em minutos, medidos entre os cliques de mudança de status. Somente pedidos com histórico completo e sem reabertura entram nesta tabela. Os pedidos antigos não recebem durações inventadas.</p>
+          </section>
+          <section class="metrics-section metrics-card">
+            <h2>Por barista</h2><button type="button" id="barista-button">Carregar histórico dos baristas</button>
+            <p class="help">Esta análise consulta o histórico privado de cada pedido. Os identificadores de conta são apresentados apenas como Barista 1, Barista 2 etc.</p>
+            <div class="metrics-table-wrap"><table class="metrics-table" id="barista-table" hidden><thead><tr><th>Barista</th><th>Preparos iniciados</th><th>Entregas confirmadas</th></tr></thead><tbody id="barista-rows"></tbody></table></div>
+          </section>
+          <section class="metrics-section warning" id="data-caveat"></section>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script type="module" src="./metricas.js"></script>
+</body>
+</html>
